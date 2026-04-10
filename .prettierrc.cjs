@@ -1,14 +1,14 @@
 module.exports = {
-  printWidth: 120,
-  tabWidth: 2,
-  useTabs: false,
-  semi: false,
-  vueIndentScriptAndStyle: true,
-  trailingComma: 'none',
-  singleQuote: true,
-  bracketSpacing: true,
-  bracketSameLine: true,
   arrowParens: 'always',
+  bracketSameLine: true,
+  bracketSpacing: true,
+  insertPragma: false,
+  printWidth: 120,
   requirePragma: false,
-  insertPragma: false
+  semi: false,
+  singleQuote: true,
+  tabWidth: 2,
+  trailingComma: 'none',
+  useTabs: false,
+  vueIndentScriptAndStyle: true
 }

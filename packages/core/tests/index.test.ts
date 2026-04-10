@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest'
-import { parseEnvFile } from '../src/parser'
-import { inferType } from '../src/inferrer'
+import { describe, expect, it } from 'vitest'
+
 import { generateDts, generateZodSchema } from '../src/generator'
+import { inferType } from '../src/inferrer'
+import { parseEnvFile } from '../src/parser'
 
 // ─── Parser ──────────────────────────────────────────────────────────────────
 
@@ -49,10 +50,10 @@ describe('parseEnvFile', () => {
 describe('inferType', () => {
   const make = (value: string, annType?: string, optional?: boolean) =>
     inferType({
-      key: 'TEST',
-      value,
+      annotations: { optional, type: annType },
       comment: '',
-      annotations: { type: annType, optional }
+      key: 'TEST',
+      value
     })
 
   it('infers number from numeric string', () => {
@@ -114,24 +115,24 @@ describe('inferType', () => {
 describe('generateDts', () => {
   const items = [
     {
-      entry: { key: 'PORT', value: '3000', comment: '', annotations: { description: 'Server port' } },
-      inferred: { tsType: 'number', zodSchema: 'z.coerce.number()', isOptional: false }
+      entry: { annotations: { description: 'Server port' }, comment: '', key: 'PORT', value: '3000' },
+      inferred: { isOptional: false, tsType: 'number', zodSchema: 'z.coerce.number()' }
     },
     {
-      entry: { key: 'SENTRY_DSN', value: '', comment: '', annotations: { optional: true } },
-      inferred: { tsType: 'string', zodSchema: 'z.string().optional()', isOptional: true }
+      entry: { annotations: { optional: true }, comment: '', key: 'SENTRY_DSN', value: '' },
+      inferred: { isOptional: true, tsType: 'string', zodSchema: 'z.string().optional()' }
     }
   ]
 
   it('generates ImportMetaEnv augmentation', () => {
-    const output = generateDts(items, { schema: 'zod', augmentImportMeta: true })
+    const output = generateDts(items, { augmentImportMeta: true, schema: 'zod' })
     expect(output).toContain('interface ImportMetaEnv')
     expect(output).toContain('readonly PORT: number')
     expect(output).toContain('readonly SENTRY_DSN?: string')
   })
 
   it('includes JSDoc from description', () => {
-    const output = generateDts(items, { schema: 'zod', augmentImportMeta: true })
+    const output = generateDts(items, { augmentImportMeta: true, schema: 'zod' })
     expect(output).toContain('/** Server port */')
   })
 })
@@ -139,8 +140,8 @@ describe('generateDts', () => {
 describe('generateZodSchema', () => {
   const items = [
     {
-      entry: { key: 'DATABASE_URL', value: 'postgres://localhost/db', comment: '', annotations: {} },
-      inferred: { tsType: 'string', zodSchema: 'z.string().url()', isOptional: false }
+      entry: { annotations: {}, comment: '', key: 'DATABASE_URL', value: 'postgres://localhost/db' },
+      inferred: { isOptional: false, tsType: 'string', zodSchema: 'z.string().url()' }
     }
   ]
 
