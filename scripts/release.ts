@@ -117,9 +117,9 @@ async function main() {
     process.exit(0)
   }
 
-  // 执行版本更新 (使用 pnpm exec 确保 monorepo 中能找到命令)
+  // 执行版本更新 (直接指定 packages/core/package.json)
   log.info('Updating version...')
-  const bumppCmd = `pnpm exec bumpp ${versionArg} -y --no-push -c "chore: release v%s" -t "v%s"`
+  const bumppCmd = `pnpm exec bumpp packages/core/package.json --release ${versionArg} -y --no-push -c "chore: release v%s" -t "v%s"`
   if (!runCommand(bumppCmd)) {
     log.error('❌ Version update failed.')
     process.exit(1)
