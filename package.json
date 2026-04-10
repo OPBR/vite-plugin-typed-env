@@ -1,0 +1,44 @@
+{
+  "name": "vite-plugin-typed-env",
+  "version": "0.1.1",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist/*.cjs",
+    "dist/*.mjs",
+    "dist/*.d.cts",
+    "dist/*.d.mts"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.ts\" \"*.cjs\" \"*.json\" \"*.md\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.ts\" \"*.cjs\" \"*.json\" \"*.md\""
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "prettier": "^3.8.2",
+    "tsdown": "^0.21.7",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4"
+  },
+  "peerDependencies": {
+    "vite": ">=4.0.0"
+  }
+}
