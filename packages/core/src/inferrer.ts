@@ -1,45 +1,39 @@
 import type { EnvEntry } from './parser'
 
 export interface InferredType {
+  defaultValue?: string
+  isOptional: boolean
   tsType: string // TypeScript 类型字符串
   zodSchema: string // Zod schema 字符串
-  isOptional: boolean
-  defaultValue?: string
 }
 
-// 判断是否是布尔值
-function isBoolean(v: string): boolean {
-  return ['true', 'false', '1', '0', 'yes', 'no'].includes(v.toLowerCase())
-}
+export function inferType(entry: EnvEntry): InferredType {
+  const { annotations, value } = entry
+  const isOptional = annotations.optional === true || value === ''
 
-// 判断是否是纯数字
-function isNumber(v: string): boolean {
-  return v !== '' && !isNaN(Number(v))
-}
+  // 优先使用 @type 注释
+  const fromAnnotation = annotations.type ? inferFromAnnotation(annotations.type) : null
 
-// 判断是否是 URL
-function isUrl(v: string): boolean {
-  try {
-    new URL(v)
-    return v.startsWith('http://') || v.startsWith('https://') || v.includes('://') // postgres://, redis:// 等
-  } catch {
-    return false
+  const base = fromAnnotation ?? inferFromValue(value)
+
+  let zodSchema = base.zodSchema
+  // 处理 optional 和 default
+  if (annotations.default !== undefined) {
+    zodSchema = `${zodSchema}.default('${annotations.default}')`
+  } else if (isOptional) {
+    zodSchema = `${zodSchema}.optional()`
+  }
+
+  return {
+    defaultValue: annotations.default,
+    isOptional,
+    tsType: base.tsType,
+    zodSchema
   }
 }
 
-// 判断是否是逗号分隔的数字列表
-function isNumberArray(v: string): boolean {
-  if (!v.includes(',')) return false
-  return v.split(',').every((s) => isNumber(s.trim()))
-}
-
-// 判断是否是逗号分隔的字符串列表
-function isStringArray(v: string): boolean {
-  return v.includes(',') && v.split(',').length > 1
-}
-
 // 解析 @type 注释指令
-function inferFromAnnotation(ann: string): Pick<InferredType, 'tsType' | 'zodSchema'> | null {
+function inferFromAnnotation(ann: string): null | Pick<InferredType, 'tsType' | 'zodSchema'> {
   // @type: enum(a, b, c)
   const enumMatch = ann.match(/^enum\((.+)\)$/)
   if (enumMatch) {
@@ -139,27 +133,33 @@ function inferFromValue(value: string): Pick<InferredType, 'tsType' | 'zodSchema
   return { tsType: 'string', zodSchema: 'z.string().min(1)' }
 }
 
-export function inferType(entry: EnvEntry): InferredType {
-  const { value, annotations } = entry
-  const isOptional = annotations.optional === true || value === ''
+// 判断是否是布尔值
+function isBoolean(v: string): boolean {
+  return ['0', '1', 'false', 'no', 'true', 'yes'].includes(v.toLowerCase())
+}
 
-  // 优先使用 @type 注释
-  const fromAnnotation = annotations.type ? inferFromAnnotation(annotations.type) : null
+// 判断是否是纯数字
+function isNumber(v: string): boolean {
+  return v !== '' && !isNaN(Number(v))
+}
 
-  const base = fromAnnotation ?? inferFromValue(value)
+// 判断是否是逗号分隔的数字列表
+function isNumberArray(v: string): boolean {
+  if (!v.includes(',')) return false
+  return v.split(',').every((s) => isNumber(s.trim()))
+}
 
-  let zodSchema = base.zodSchema
-  // 处理 optional 和 default
-  if (annotations.default !== undefined) {
-    zodSchema = `${zodSchema}.default('${annotations.default}')`
-  } else if (isOptional) {
-    zodSchema = `${zodSchema}.optional()`
-  }
+// 判断是否是逗号分隔的字符串列表
+function isStringArray(v: string): boolean {
+  return v.includes(',') && v.split(',').length > 1
+}
 
-  return {
-    tsType: base.tsType,
-    zodSchema,
-    isOptional,
-    defaultValue: annotations.default
+// 判断是否是 URL
+function isUrl(v: string): boolean {
+  try {
+    new URL(v)
+    return v.startsWith('http://') || v.startsWith('https://') || v.includes('://') // postgres://, redis:// 等
+  } catch {
+    return false
   }
 }
