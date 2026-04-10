@@ -1,0 +1,6 @@
+{
+  "files": ["packages/core/package.json"],
+  "execute": "pnpm build",
+  "commit": "chore: release v%s",
+  "tag": "v%s"
+}
