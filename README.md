@@ -18,6 +18,12 @@ A Vite plugin that automatically generates TypeScript types and Zod schemas from
 npm install vite-plugin-typed-env -D
 ```
 
+If using Zod validation (default), also install zod:
+
+```bash
+npm install zod
+```
+
 ## Usage
 
 ### 1. Add to Vite config
