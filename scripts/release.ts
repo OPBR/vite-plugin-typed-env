@@ -23,6 +23,23 @@ const log = {
   warn: (...messages: string[]) => console.log(colors.yellow, ...messages, colors.reset)
 }
 
+function calculateNewVersion(current: string, releaseType: string): string {
+  const parts = current.split('.').map(Number)
+  const [major, minor, patch] = parts
+
+  switch (releaseType) {
+    case 'major':
+      return `${major + 1}.0.0`
+    case 'minor':
+      return `${major}.${minor + 1}.0`
+    case 'patch':
+      return `${major}.${minor}.${patch + 1}`
+    default:
+      // custom version
+      return releaseType
+  }
+}
+
 function getPackageJson(): { name: string; version: string } {
   const pkgPath = path.join(process.cwd(), 'packages/core/package.json')
   return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
@@ -56,6 +73,8 @@ async function main() {
     versionArg = customVersion
   }
 
+  const newVersion = calculateNewVersion(pkg.version, versionArg)
+
   log.title('\n📝 Step 1: Pre-release checks\n')
 
   log.info('Running typecheck...')
@@ -88,8 +107,23 @@ async function main() {
 
   log.title('\n📝 Step 2: Update version\n')
 
-  log.info(`Updating version with bumpp (${versionArg})...`)
-  runCommand(`bumpp ${versionArg} --execute="pnpm build" --commit "chore: release v%s" --tag "v%s"`)
+  // 显示版本变化预览
+  log.info(`Version change: ${pkg.version} → ${newVersion}`)
+
+  const confirmVersion = await prompt('\nConfirm version update? (y/n): ')
+
+  if (confirmVersion.toLowerCase() !== 'y') {
+    log.warn('\n⏸️  Version update cancelled. Exiting.')
+    process.exit(0)
+  }
+
+  // 执行版本更新 (使用 pnpm exec 确保 monorepo 中能找到命令)
+  log.info('Updating version...')
+  const bumppCmd = `pnpm exec bumpp ${versionArg} -y --no-push -c "chore: release v%s" -t "v%s"`
+  if (!runCommand(bumppCmd)) {
+    log.error('❌ Version update failed.')
+    process.exit(1)
+  }
 
   const newPkg = getPackageJson()
   log.success(`✅ Version updated: ${pkg.version} → ${newPkg.version}`)
@@ -103,7 +137,7 @@ async function main() {
 
   log.warn('To publish to npm:')
   log.option('  1. Push commits and tag to GitHub:')
-  log.plain(`     git push origin feat/release-script`)
+  log.plain(`     git push origin HEAD`)
   log.plain(`     git push origin v${newPkg.version}`)
   log.option('  2. GitHub Actions will automatically publish to npm')
   log.option('  3. GitHub Release will be created automatically')
@@ -112,13 +146,17 @@ async function main() {
 
   if (confirmPush.toLowerCase() === 'y') {
     log.info('\nPushing to GitHub...')
-    runCommand('git push origin feat/release-script')
+
+    // 获取当前分支名
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
+
+    runCommand(`git push origin ${branch}`)
     runCommand(`git push origin v${newPkg.version}`)
     log.success('\n✅ Pushed successfully!')
     log.info('Check progress at: https://github.com/OPBR/vite-plugin-typed-env/actions')
   } else {
     log.warn('\n⏸️  Skipped push. You can push manually later.')
-    log.option('Remember to push the tag: git push origin v${newPkg.version}')
+    log.option(`git push origin HEAD && git push origin v${newPkg.version}`)
   }
 
   log.title('\n🎉 Release process completed!\n')
